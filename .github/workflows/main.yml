@@ -74,5 +74,5 @@ jobs:
             docker compose ps
             
             echo "=== Verificando portas expostas ==="
-            docker compose port web 2723 2>/dev/null || echo "Porta 5000 não exposta ou serviço não encontrado"
+            docker compose port web 2723 2>/dev/null || echo "Porta não foi exposta ou serviço não encontrado"
           EOF
