@@ -2,6 +2,7 @@ package tech.inovasoft.inevolving.ms.AuthForMService.service;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.IncorrectClaimException;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.stereotype.Service;
@@ -17,10 +18,8 @@ import java.time.ZoneOffset;
 @Service
 public class TokenService {
 
-//    @Value("${api.security.token.secret}")
-//    private String secret;
-
     private final RSAPrivateKey privateKey;
+
     private final RSAPublicKey publicKey;
 
     public TokenService(RSAPrivateKey privateKey, RSAPublicKey publicKey) {
@@ -45,35 +44,33 @@ public class TokenService {
         try {
 
             Algorithm algorithm = Algorithm.RSA256(publicKey);
-//            return JWT.require(algorithm)
-//                            .withIssuer("AuthForMService")
-//                            .withAudience("AuthForMService")
-//                            .build()
-//                            .verify(token)
-//                            .getSubject();
-               return new TokenValidateResponse(
-                        JWT.require(algorithm)
-                        .withIssuer("AuthForMService")
-                        .withAudience("AuthForMService")
-                        .build()
-                        .verify(token)
-                        .getSubject(),
-                        JWT.require(algorithm)
-                        .withIssuer("AuthForMService")
-                        .withAudience("AuthForMService")
-                        .build()
-                        .verify(token)
-                        .getAudience().getFirst()
-               );
+            return new TokenValidateResponse(
+                    JWT.require(algorithm)
+                            .withIssuer("AuthForMService")
+                            .build()
+                            .verify(token)
+                            .getSubject(),
+                    JWT.require(algorithm)
+                            .withIssuer("AuthForMService")
+                            .build()
+                            .verify(token)
+                            .getAudience().getFirst()
+            );
+        } catch (IncorrectClaimException e) {
+            throw new RuntimeException("Invalid token");
         } catch (JWTVerificationException e) {
             return null;
         }
     }
 
-
     private Instant createExpirationDate() {
         return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
     }
+
+
+
+
+
 
 
 }

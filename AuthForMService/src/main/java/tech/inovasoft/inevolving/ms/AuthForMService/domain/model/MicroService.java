@@ -3,7 +3,6 @@ package tech.inovasoft.inevolving.ms.AuthForMService.domain.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Date;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -20,7 +19,6 @@ public class MicroService {
     private UUID id;
     @Column(unique = true)
     private String name;
-
     private String superSecret;
 
 }
