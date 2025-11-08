@@ -1,0 +1,78 @@
+name: Deploy Java Backend via SSH with Password
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Instalar Java 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Dar permissão ao mvnw
+        working-directory: AuthForMService
+        run: chmod +x mvnw
+
+      - name: Build com Maven
+        working-directory: AuthForMService
+        run: ./mvnw clean package
+
+      - name: Compactar pasta AuthForMService
+        run: tar -cvf AuthForMService.tar AuthForMService/
+
+      - name: Instalar sshpass
+        run: sudo apt-get install -y sshpass
+
+      - name: Enviar .tar para VPS
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" scp -o StrictHostKeyChecking=no AuthForMService.tar ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/AuthForMService.tar
+
+      - name: Executar comandos na VPS
+        run: |
+          TARGET_DIR="/home/root/Back-End/Auth-For-MService"
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << EOF
+            set -e
+      
+            rm -rf "$TARGET_DIR/AuthForMService"
+            mkdir -p "$TARGET_DIR"
+            tar -xvf /tmp/AuthForMService.tar -C "$TARGET_DIR"
+            rm /tmp/AuthForMService.tar
+
+            cd "$TARGET_DIR/AuthForMService/src/main/resources"
+            openssl genrsa -out private.pem 2048
+            openssl rsa -in private.pem -pubout -out public.pem
+      
+            cd "$TARGET_DIR/AuthForMService"
+            docker-compose down --volumes --remove-orphans
+            docker-compose up --build -d
+      
+            echo "Containers ativos:"
+            docker ps
+          EOF
+
+      - name: Aguardar aplicação iniciar completamente
+        run: |
+          echo "⏳ Aguardando 60 segundos para garantir que a aplicação está pronta..."
+          sleep 60
+          echo "✅ Prosseguindo com os testes"
+
+      - name: Verificar deployment
+        run: |
+          sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            cd /home/root/Back-End/Auth-For-MService/AuthForMService
+            echo "=== Containers em execução ==="
+            docker compose ps
+            
+            echo "=== Verificando portas expostas ==="
+            docker compose port web 2723 2>/dev/null || echo "Porta 5000 não exposta ou serviço não encontrado"
+          EOF
