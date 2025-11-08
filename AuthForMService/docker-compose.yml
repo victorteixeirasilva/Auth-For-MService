@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  auth-for-m-service:
+    build:
+      context: .
+    container_name: auth-for-m-service
+    ports:
+      - "2723:2723"
+    networks:
+      - backend
+
+networks:
+  backend:
+    external: true
