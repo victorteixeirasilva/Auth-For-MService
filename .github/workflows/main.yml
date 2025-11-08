@@ -31,6 +31,12 @@ jobs:
         working-directory: AuthForMService/src/main/resources/
         run: openssl rsa -in private.pem -pubout -out public.pem
 
+      - name: Upload da chave pública como artefato
+        uses: actions/upload-artifact@v3
+        with:
+          name: chave-publica
+          path: AuthForMService/src/main/resources/public.pem
+
       - name: Build com Maven
         working-directory: AuthForMService
         run: ./mvnw clean package
