@@ -4,44 +4,67 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tech.inovasoft.inevolving.ms.AuthForMService.domain.dto.response.TokenValidateResponse;
 import tech.inovasoft.inevolving.ms.AuthForMService.domain.model.MicroService;
 
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.UUID;
 
 @Service
 public class TokenService {
 
-    @Value("${api.security.token.secret}")
-    private String secret;
+//    @Value("${api.security.token.secret}")
+//    private String secret;
 
-    public String generateToken(MicroService user) {
+    private final RSAPrivateKey privateKey;
+    private final RSAPublicKey publicKey;
+
+    public TokenService(RSAPrivateKey privateKey, RSAPublicKey publicKey) {
+        this.privateKey = privateKey;
+        this.publicKey = publicKey;
+    }
+
+    public String generateToken(MicroService microService, String microServiceNameReceiver) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.create()
                     .withIssuer("AuthForMService")
-                    .withSubject(user.getId().toString())
+                    .withSubject(microService.getName())
+                    .withAudience(microServiceNameReceiver)
                     .withExpiresAt(createExpirationDate())
-                    .sign(algorithm);
+                    .sign(Algorithm.RSA256(null, privateKey));
         } catch (JWTCreationException e) {
             throw new RuntimeException("Error while generating token", e);
         }
     }
 
-    public UUID validateToken(String token) {
+    public TokenValidateResponse validateToken(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return UUID.fromString(
-                    JWT.require(algorithm)
-                            .withIssuer("AuthForMService")
-                            .build()
-                            .verify(token)
-                            .getSubject()
-            );
+
+            Algorithm algorithm = Algorithm.RSA256(publicKey);
+//            return JWT.require(algorithm)
+//                            .withIssuer("AuthForMService")
+//                            .withAudience("AuthForMService")
+//                            .build()
+//                            .verify(token)
+//                            .getSubject();
+               return new TokenValidateResponse(
+                        JWT.require(algorithm)
+                        .withIssuer("AuthForMService")
+                        .withAudience("AuthForMService")
+                        .build()
+                        .verify(token)
+                        .getSubject(),
+                        JWT.require(algorithm)
+                        .withIssuer("AuthForMService")
+                        .withAudience("AuthForMService")
+                        .build()
+                        .verify(token)
+                        .getAudience().getFirst()
+               );
         } catch (JWTVerificationException e) {
             return null;
         }
