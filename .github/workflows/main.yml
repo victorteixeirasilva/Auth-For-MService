@@ -23,6 +23,14 @@ jobs:
         working-directory: AuthForMService
         run: chmod +x mvnw
 
+      - name: Gerar Chave privada No Git
+        working-directory: AuthForMService/src/main/resources/
+        run: openssl genrsa -out private.pem 2048
+
+      - name: Gerar Chave publica No Git
+        working-directory: AuthForMService/src/main/resources/
+        run: openssl rsa -in private.pem -pubout -out public.pem
+
       - name: Build com Maven
         working-directory: AuthForMService
         run: ./mvnw clean package
@@ -32,6 +40,9 @@ jobs:
 
       - name: Instalar sshpass
         run: sudo apt-get install -y sshpass
+
+      - name: Verificar conteúdo do .tar
+        run: tar -tvf AuthForMService.tar | grep pem
 
       - name: Enviar .tar para VPS
         run: |
@@ -48,9 +59,9 @@ jobs:
             tar -xvf /tmp/AuthForMService.tar -C "$TARGET_DIR"
             rm /tmp/AuthForMService.tar
 
-            cd "$TARGET_DIR/AuthForMService/src/main/resources"
-            openssl genrsa -out private.pem 2048
-            openssl rsa -in private.pem -pubout -out public.pem
+            # cd "$TARGET_DIR/AuthForMService/src/main/resources"
+            # openssl genrsa -out private.pem 2048
+            # openssl rsa -in private.pem -pubout -out public.pem
       
             cd "$TARGET_DIR/AuthForMService"
             docker-compose down --volumes --remove-orphans
