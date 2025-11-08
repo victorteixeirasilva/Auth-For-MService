@@ -85,5 +85,38 @@ jobs:
             docker compose ps
             
             echo "=== Verificando portas expostas ==="
-            docker compose port web 2723 2>/dev/null || echo "Porta não foi exposta ou serviço não encontrado"
+            docker compose port web 2723 >/dev/null || echo "Porta não foi exposta ou serviço não encontrado"
           EOF
+          
+      - name: Instalar Newman e reporters
+        run: |
+          npm install -g newman
+          npm install -g newman-reporter-htmlextra
+
+      - name: Executar testes da coleção Postman
+        run: |
+          newman run ${{ secrets.POSTMAN_COLLECTION_URL }} \
+            --reporters cli,htmlextra,json \
+            --reporter-htmlextra-export newman-report.html \
+            --reporter-htmlextra-title "AdministrationBFF API Tests" \
+            --reporter-json-export newman-results.json \
+            --bail \
+            --timeout-request 30000 \
+            --color on
+        continue-on-error: false
+
+      - name: Upload dos resultados dos testes (HTML e JSON)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-test-results
+          path: |
+            newman-report.html
+            newman-results.json
+
+      - name: Notificar falha nos testes
+        if: failure()
+        run: |
+          echo "❌ Os testes da API falharam após o deploy!"
+          echo "Verifique os logs acima para mais detalhes."
+          exit 1
