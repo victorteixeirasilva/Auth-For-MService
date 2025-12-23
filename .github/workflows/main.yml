@@ -1,4 +1,4 @@
-name: Deploy Java Backend via SSH with Password
+name: Deploy
 
 on:
   push:
